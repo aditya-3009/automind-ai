@@ -1,56 +1,110 @@
 # AutoMind AI 🚗
 
-An educational automotive knowledge assistant that uses retrieval-augmented generation (RAG) to answer questions from a curated collection of vehicle documents and explain which sources support each answer.
+An educational automotive knowledge assistant prototype. The first milestone implements document ingestion, source-aware chunking, TF-IDF retrieval, and a FastAPI endpoint that returns relevant evidence passages.
 
-> **Project status:** Early-stage prototype. This is a learning and research project, not an official automotive diagnostic system. It must not be used to make safety-critical repair or driving decisions.
+> **Project status:** Early-stage prototype. It is not an OEM tool or official automotive diagnostic system. Do not use it to make safety-critical repair or driving decisions.
 
-## Goals
+## What works today
 
-- Ingest permitted automotive documents and preserve source metadata.
-- Split documents into searchable chunks and build a retrieval index.
-- Retrieve relevant passages for a user's question.
-- Generate answers grounded in retrieved evidence, with document and page/section references where available.
-- Measure retrieval quality, answer grounding, latency, and common failure cases.
-- Expose the workflow through a small API once the retrieval pipeline is working.
+- Load Markdown and plain-text documents from a local corpus.
+- Split documents into overlapping chunks while preserving source filenames and chunk IDs.
+- Rank passages with a transparent TF-IDF/cosine-similarity baseline.
+- Query the index through a small FastAPI service.
+- Return source metadata and scores so results can be inspected.
+- Run automated tests locally or through GitHub Actions.
 
-## Planned architecture
+This is **retrieval-only** today. It does not generate answers with an LLM yet. We will benchmark the baseline before introducing embeddings and generation.
 
-1. **Document ingestion**: load public or otherwise permitted manuals and technical documents.
-2. **Chunking and metadata**: split text into useful passages while retaining source, section, page, and document identifiers.
-3. **Retrieval**: embed passages and rank relevant chunks for each query.
-4. **Answer generation**: provide the retrieved evidence to an LLM and require it to distinguish evidence from uncertainty.
-5. **Citations and guardrails**: show source references, report when evidence is insufficient, and avoid presenting generated content as authoritative repair advice.
-6. **Evaluation**: run a small labelled question set and track retrieval and response quality.
-7. **API / interface**: add a testable interface after the core pipeline is validated.
+## Quick start
 
-## Initial milestones
+Requires Python 3.10 or newer.
 
-- [ ] Define the document and chunk data models.
-- [ ] Add a small, legally usable sample corpus.
-- [ ] Implement ingestion and text extraction.
-- [ ] Implement chunking with source metadata.
-- [ ] Build a baseline retrieval pipeline.
-- [ ] Return answers with source references.
-- [ ] Add tests for ingestion, retrieval, citations, and empty results.
-- [ ] Create an evaluation dataset and record baseline metrics.
-- [ ] Add a FastAPI endpoint and usage examples.
+```bash
+python -m venv .venv
+```
 
-## Proposed stack
+Activate the environment:
 
-Python, a document parsing library, an embedding model, a vector index, an LLM provider abstraction, FastAPI, pytest, and GitHub Actions. The exact components will be selected and documented as the prototype develops.
+```powershell
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+```
+
+```bash
+# macOS/Linux
+source .venv/bin/activate
+```
+
+Install the package and development tools, then run the tests:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest
+```
+
+Start the API:
+
+```bash
+uvicorn automind_ai.api:app --reload
+```
+
+Open the interactive API docs at http://127.0.0.1:8000/docs.
+
+## Try a query
+
+```bash
+curl -X POST "http://127.0.0.1:8000/query" \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What does ABS do?","top_k":3}'
+```
+
+The response includes retrieved passages, relative source paths, chunk IDs, and relevance scores. The included sample file is synthetic demo content, not a vehicle manual.
+
+## Current architecture
+
+```text
+Local Markdown/TXT files
+        |
+        v
+Document loader and chunker
+        |
+        v
+TF-IDF index
+        |
+        v
+FastAPI /query
+        |
+        v
+Ranked source passages + metadata
+```
+
+## Roadmap
+
+- [x] Define source-aware chunk data model.
+- [x] Load Markdown and plain-text sources.
+- [x] Implement overlapping chunking.
+- [x] Build TF-IDF retrieval baseline.
+- [x] Add FastAPI health and query endpoints.
+- [x] Add tests and continuous integration.
+- [ ] Add a labelled retrieval evaluation set.
+- [ ] Measure Recall@k and reciprocal rank on the evaluation set.
+- [ ] Add configurable corpus paths and richer section/page metadata.
+- [ ] Compare lexical retrieval with embedding-based retrieval.
+- [ ] Add citations-aware LLM answer generation with an explicit insufficient-evidence response.
+- [ ] Evaluate answer groundedness, latency, and failure cases.
 
 ## Safety and data policy
 
-- Use public, licensed, or otherwise authorised source documents.
-- Do not upload private, proprietary, or copyrighted documents without permission.
-- Treat retrieval results as informational material, not definitive instructions.
-- If the sources do not support an answer, the system should say so.
-- Image enhancement or generated text must not be treated as evidence of vehicle damage or safety condition.
+- Use public, licensed, or otherwise authorised documents only.
+- Do not upload private or proprietary vehicle documents without permission.
+- Treat retrieved passages as informational references, not authoritative repair instructions.
+- The system should acknowledge when the indexed corpus does not support an answer.
+- Generated text or enhanced imagery must not be treated as evidence of vehicle damage or safety condition.
 
-## Development
+## Project log
 
-Project setup and implementation instructions will be added as the first working components are completed. See [LEARNING_LOG.md](LEARNING_LOG.md) for progress and decisions.
+See [LEARNING_LOG.md](LEARNING_LOG.md) for implementation notes, decisions, and next steps.
 
 ## License
 
-License to be selected once source-data and dependency choices are finalised.
+A license will be selected once source-data and dependency choices are finalised.
